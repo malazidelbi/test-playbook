@@ -1,201 +1,284 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-      "PlaybookName": {
-          "defaultValue": "Enrich-IP",
-          "type": "string"
-      }
+    "$schema":  "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion":  "1.0.0.0",
+    "metadata":  {
+        "title":  "",
+        "description":  "",
+        "prerequisites":  "",
+        "postDeployment":  [
+        ],
+        "prerequisitesDeployTemplateFile":  "",
+        "lastUpdateTime":  "",
+        "entities":  [
+        ],
+        "tags":  [
+        ],
+        "support":  {
+            "tier":  "community",
+            "armtemplate":  "Generated from https://github.com/Azure/Azure-Sentinel/tree/master/Tools/Playbook-ARM-Template-Generator"
+        },
+        "author":  {
+            "name":  ""
+        }
     },
-    "variables": {
-      "AzureSentinelConnectionName": "[concat('azuresentinel-', parameters('PlaybookName'))]",
-      "MDATPConnectionName": "[concat('wdatp-', parameters('PlaybookName'))]",
-      "azuremonitorlogs": "[concat('azuremonitorlogs-', parameters('PlaybookName'))]"
+    "parameters":  {
+        "PlaybookName":  {
+            "defaultValue":  "DEV-enrich-signin-from-ip",
+            "type":  "string"
+        }
     },
-    "resources": [
+    "variables":  {
+        "MicrosoftSentinelConnectionName":  "[concat('MicrosoftSentinel-', parameters('PlaybookName'))]",
+        "AzuremonitorlogsConnectionName":  "[concat('Azuremonitorlogs-', parameters('PlaybookName'))]",
+        "Wdatp-1ConnectionName":  "[concat('Wdatp-1-', parameters('PlaybookName'))]"
+    },
+    "resources":  [
         {
-            "type": "Microsoft.Logic/workflows",
-            "apiVersion": "2017-07-01",
-            "name": "DEV-enrich-signin-from-ip",
-            "location": "northeurope",
-            "identity": {
-                "type": "SystemAssigned"
-            },
-            "properties": {
-                "state": "Enabled",
-                "definition": {
-                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
-                    "contentVersion": "1.0.0.0",
-                    "parameters": {
-                        "$connections": {
-                            "defaultValue": {},
-                            "type": "Object"
+            "properties":  {
+                "provisioningState":  "Succeeded",
+                "state":  "Enabled",
+                "definition":  {
+                    "$schema":  "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion":  "1.0.0.0",
+                    "parameters":  {
+                        "$connections":  {
+                            "defaultValue":  {
+                            },
+                            "type":  "Object"
                         }
                     },
-                    "triggers": {
-                        "Microsoft_Sentinel_incident": {
-                            "type": "ApiConnectionWebhook",
-                            "inputs": {
-                                "host": {
-                                    "connection": {
-                                        "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                    "triggers":  {
+                        "Microsoft_Sentinel_incident":  {
+                            "type":  "ApiConnectionWebhook",
+                            "inputs":  {
+                                "host":  {
+                                    "connection":  {
+                                        "name":  "@parameters('$connections')['azuresentinel_1']['connectionId']"
                                     }
                                 },
-                                "body": {
-                                    "callback_url": "@{listCallbackUrl()}"
+                                "body":  {
+                                    "callback_url":  "@{listCallbackUrl()}"
                                 },
-                                "path": "/incident-creation"
+                                "path":  "/incident-creation"
                             }
                         }
                     },
-                    "actions": {
-                        "Entities_-_Get_IPs": {
-                            "runAfter": {},
-                            "type": "ApiConnection",
-                            "inputs": {
-                                "host": {
-                                    "connection": {
-                                        "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                    "actions":  {
+                        "Entities_-_Get_IPs":  {
+                            "runAfter":  {
+                            },
+                            "type":  "ApiConnection",
+                            "inputs":  {
+                                "host":  {
+                                    "connection":  {
+                                        "name":  "@parameters('$connections')['azuresentinel_1']['connectionId']"
                                     }
                                 },
-                                "method": "post",
-                                "body": "@triggerBody()?['object']?['properties']?['relatedEntities']",
-                                "path": "/entities/ip"
+                                "method":  "post",
+                                "body":  "@triggerBody()?['object']?['properties']?['relatedEntities']",
+                                "path":  "/entities/ip"
                             }
                         },
-                        "For_each_Entra_ID": {
-                            "foreach": "@body('Entities_-_Get_IPs')?['IPs']",
-                            "actions": {
-                                "Add_task_to_incident": {
-                                    "runAfter": {
-                                        "Run_query_and_list_results": [
+                        "For_each_Entra_ID":  {
+                            "foreach":  "@body('Entities_-_Get_IPs')?['IPs']",
+                            "actions":  {
+                                "Add_task_to_incident":  {
+                                    "runAfter":  {
+                                        "Run_query_and_list_results":  [
                                             "Succeeded"
                                         ]
                                     },
-                                    "type": "ApiConnection",
-                                    "inputs": {
-                                        "host": {
-                                            "connection": {
-                                                "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                                    "type":  "ApiConnection",
+                                    "inputs":  {
+                                        "host":  {
+                                            "connection":  {
+                                                "name":  "@parameters('$connections')['azuresentinel_1']['connectionId']"
                                             }
                                         },
-                                        "method": "post",
-                                        "body": {
-                                            "incidentArmId": "@triggerBody()?['object']?['id']",
-                                            "taskTitle": "Sign-ins seen with @{items('For_each_Entra_ID')?['Address']}",
-                                            "taskDescription": "<p>KQL results:<br>\n@{body('Run_query_and_list_results')?['value']}</p>"
+                                        "method":  "post",
+                                        "body":  {
+                                            "incidentArmId":  "@triggerBody()?['object']?['id']",
+                                            "taskTitle":  "Sign-ins seen with @{items('For_each_Entra_ID')?['Address']}",
+                                            "taskDescription":  "\u003cp\u003eKQL results:\u003cbr\u003e\n@{body('Run_query_and_list_results')?['value']}\u003c/p\u003e"
                                         },
-                                        "path": "/Incidents/CreateTask"
+                                        "path":  "/Incidents/CreateTask"
                                     }
                                 },
-                                "Run_query_and_list_results": {
-                                    "type": "ApiConnection",
-                                    "inputs": {
-                                        "host": {
-                                            "connection": {
-                                                "name": "@parameters('$connections')['azuremonitorlogs']['connectionId']"
+                                "Run_query_and_list_results":  {
+                                    "type":  "ApiConnection",
+                                    "inputs":  {
+                                        "host":  {
+                                            "connection":  {
+                                                "name":  "@parameters('$connections')['azuremonitorlogs']['connectionId']"
                                             }
                                         },
-                                        "method": "post",
-                                        "body": "SigninLogs\n| where IPAddress == \"@{items('For_each_Entra_ID')?['Address']}\" and IsInteractive == true and ResultType == 0\n| project TimeGenerated, UserPrincipalName, AppDisplayName, AuthenticationRequirement, ClientAppUsed\n| summarize count() by UserPrincipalName,AppDisplayName, ClientAppUsed",
-                                        "path": "/queryData",
-                                        "queries": {
-                                            "subscriptions": "subscription().subscriptionId",
-                                            "timerange": "Last 3 days"
+                                        "method":  "post",
+                                        "body":  "SigninLogs\n| where IPAddress == \"@{items('For_each_Entra_ID')?['Address']}\" and IsInteractive == true and ResultType == 0\n| project TimeGenerated, UserPrincipalName, AppDisplayName, AuthenticationRequirement, ClientAppUsed\n| summarize count() by UserPrincipalName,AppDisplayName, ClientAppUsed",
+                                        "path":  "/queryData",
+                                        "queries":  {
+                                            "subscriptions":  "ebc39b89-3502-4871-a087-c6ab62d85a4d",
+                                            "resourcegroups":  "Demo-Sentinel-RG",
+                                            "resourcetype":  "Log Analytics Workspace",
+                                            "resourcename":  "Demo-Sentinel",
+                                            "timerange":  "Last 3 days"
                                         }
                                     }
                                 }
                             },
-                            "runAfter": {
-                                "Entities_-_Get_IPs": [
+                            "runAfter":  {
+                                "Entities_-_Get_IPs":  [
                                     "Succeeded"
                                 ]
                             },
-                            "type": "Foreach"
+                            "type":  "Foreach"
                         },
-                        "For_each_Defender": {
-                            "foreach": "@body('Entities_-_Get_IPs')?['IPs']",
-                            "actions": {
-                                "Advanced_Hunting": {
-                                    "type": "ApiConnection",
-                                    "inputs": {
-                                        "host": {
-                                            "connection": {
-                                                "name": "@parameters('$connections')['wdatp-1']['connectionId']"
+                        "For_each_Defender":  {
+                            "foreach":  "@body('Entities_-_Get_IPs')?['IPs']",
+                            "actions":  {
+                                "Advanced_Hunting":  {
+                                    "type":  "ApiConnection",
+                                    "inputs":  {
+                                        "host":  {
+                                            "connection":  {
+                                                "name":  "@parameters('$connections')['wdatp-1']['connectionId']"
                                             }
                                         },
-                                        "method": "post",
-                                        "body": {
-                                            "Query": "let Ip_Address = \"@{items('For_each_Defender')?['Address']}\";\nsearch in (DeviceNetworkEvents,DeviceEvents,DeviceLogonEvents)\nTimestamp between (ago(30d) .. now())\nand (LocalIP has Ip_Address or RemoteIP has Ip_Address)\n| summarize by DeviceName, InitiatingProcessAccountUpn\n"
+                                        "method":  "post",
+                                        "body":  {
+                                            "Query":  "let Ip_Address = \"@{items('For_each_Defender')?['Address']}\";\nsearch in (DeviceNetworkEvents,DeviceEvents,DeviceLogonEvents)\nTimestamp between (ago(30d) .. now())\nand (LocalIP has Ip_Address or RemoteIP has Ip_Address)\n| summarize by DeviceName, InitiatingProcessAccountUpn\n"
                                         },
-                                        "path": "/api/advancedqueries/run"
+                                        "path":  "/api/advancedqueries/run"
                                     }
                                 },
-                                "Add_task_to_incident_1": {
-                                    "runAfter": {
-                                        "Advanced_Hunting": [
+                                "Add_task_to_incident_1":  {
+                                    "runAfter":  {
+                                        "Advanced_Hunting":  [
                                             "Succeeded"
                                         ]
                                     },
-                                    "type": "ApiConnection",
-                                    "inputs": {
-                                        "host": {
-                                            "connection": {
-                                                "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                                    "type":  "ApiConnection",
+                                    "inputs":  {
+                                        "host":  {
+                                            "connection":  {
+                                                "name":  "@parameters('$connections')['azuresentinel_1']['connectionId']"
                                             }
                                         },
-                                        "method": "post",
-                                        "body": {
-                                            "incidentArmId": "@triggerBody()?['object']?['id']",
-                                            "taskTitle": "Device Events Seen with @{items('For_each_Defender')?['Address']}",
-                                            "taskDescription": "<p>Advanced Hunting results:<br>@{body('Advanced_Hunting')?['Results']}</p><br>"
+                                        "method":  "post",
+                                        "body":  {
+                                            "incidentArmId":  "@triggerBody()?['object']?['id']",
+                                            "taskTitle":  "Device Events Seen with @{items('For_each_Defender')?['Address']}",
+                                            "taskDescription":  "\u003cp\u003eAdvanced Hunting results:\u003cbr\u003e@{body('Advanced_Hunting')?['Results']}\u003c/p\u003e\u003cbr\u003e"
                                         },
-                                        "path": "/Incidents/CreateTask"
+                                        "path":  "/Incidents/CreateTask"
                                     }
                                 }
                             },
-                            "runAfter": {
-                                "Entities_-_Get_IPs": [
+                            "runAfter":  {
+                                "Entities_-_Get_IPs":  [
                                     "Succeeded"
                                 ]
                             },
-                            "type": "Foreach"
+                            "type":  "Foreach"
                         }
                     },
-                    "outputs": {}
+                    "outputs":  {
+                    }
                 },
-                "parameters": {
-                    "$connections": {
-                        "value": {
-                            "azuresentinel": {
-                                "connectionId": "[resourceId('Microsoft.Web/connections', variables('AzureSentinelConnectionName'))]",
-                                "connectionName": "[variables('AzureSentinelConnectionName')]",
-                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuresentinel')]",
-                                "connectionProperties": {
-                                    "authentication": {
-                                        "type": "ManagedServiceIdentity"
+                "parameters":  {
+                    "$connections":  {
+                        "value":  {
+                            "azuresentinel_1":  {
+                                "connectionId":  "[resourceId('Microsoft.Web/connections', variables('MicrosoftSentinelConnectionName'))]",
+                                "connectionName":  "[variables('MicrosoftSentinelConnectionName')]",
+                                "id":  "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Azuresentinel')]",
+                                "connectionProperties":  {
+                                    "authentication":  {
+                                        "type":  "ManagedServiceIdentity"
                                     }
                                 }
                             },
-                            "azuremonitorlogs": {
-                                "connectionId": "[resourceId('Microsoft.Web/connections', variables('azuremonitorlogs'))]",
-                                "connectionName": "[variables('azuremonitorlogs')]",
-                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuremonitorlogs')]"
-                            },
-                            "wdatp": {
-                                "connectionId": "[resourceId('Microsoft.Web/connections', variables('MDATPConnectionName'))]",
-                                "connectionName": "[variables('MDATPConnectionName')]",
-                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/wdatp')]",
-                                "connectionProperties": {
-                                    "authentication": {
-                                        "type": "ManagedServiceIdentity"
+                            "azuremonitorlogs":  {
+                                "connectionId":  "[resourceId('Microsoft.Web/connections', variables('AzuremonitorlogsConnectionName'))]",
+                                "connectionName":  "[variables('AzuremonitorlogsConnectionName')]",
+                                "id":  "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Azuremonitorlogs')]",
+                                "connectionProperties":  {
+                                    "authentication":  {
+                                        "type":  "ManagedServiceIdentity"
                                     }
                                 }
+                            },
+                            "wdatp-1":  {
+                                "connectionId":  "[resourceId('Microsoft.Web/connections', variables('Wdatp-1ConnectionName'))]",
+                                "connectionName":  "[variables('Wdatp-1ConnectionName')]",
+                                "id":  "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Wdatp-1')]"
                             }
                         }
                     }
                 }
+            },
+            "name":  "[parameters('PlaybookName')]",
+            "type":  "Microsoft.Logic/workflows",
+            "location":  "[resourceGroup().location]",
+            "identity":  {
+                "type":  "SystemAssigned"
+            },
+            "tags":  {
+                "hidden-SentinelTemplateName":  "DEV-enrich-signin-from-ip",
+                "hidden-SentinelTemplateVersion":  "1.0"
+            },
+            "apiVersion":  "2017-07-01",
+            "dependsOn":  [
+                "[resourceId('Microsoft.Web/connections', variables('MicrosoftSentinelConnectionName'))]",
+                "[resourceId('Microsoft.Web/connections', variables('AzuremonitorlogsConnectionName'))]",
+                "[resourceId('Microsoft.Web/connections', variables('Wdatp-1ConnectionName'))]"
+            ]
+        },
+        {
+            "type":  "Microsoft.Web/connections",
+            "apiVersion":  "2016-06-01",
+            "name":  "[variables('MicrosoftSentinelConnectionName')]",
+            "location":  "[resourceGroup().location]",
+            "kind":  "V1",
+            "properties":  {
+                "displayName":  "[variables('MicrosoftSentinelConnectionName')]",
+                "customParameterValues":  {
+                },
+                "parameterValueType":  "Alternative",
+                "api":  {
+                    "id":  "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Azuresentinel')]"
+                }
+            }
+        },
+        {
+            "type":  "Microsoft.Web/connections",
+            "apiVersion":  "2016-06-01",
+            "name":  "[variables('AzuremonitorlogsConnectionName')]",
+            "location":  "[resourceGroup().location]",
+            "kind":  "V1",
+            "properties":  {
+                "displayName":  "[variables('AzuremonitorlogsConnectionName')]",
+                "customParameterValues":  {
+                },
+                "parameterValueType":  "Alternative",
+                "api":  {
+                    "id":  "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Azuremonitorlogs')]"
+                }
+            }
+        },
+        {
+            "type":  "Microsoft.Web/connections",
+            "apiVersion":  "2016-06-01",
+            "name":  "[variables('Wdatp-1ConnectionName')]",
+            "location":  "[resourceGroup().location]",
+            "kind":  "V1",
+            "properties":  {
+                "displayName":  "[variables('Wdatp-1ConnectionName')]",
+                "customParameterValues":  {
+                },
+                "api":  {
+                    "id":  "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Wdatp-1')]"
+                }
             }
         }
     ]
-  }
+}
