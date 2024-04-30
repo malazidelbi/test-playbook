@@ -169,10 +169,10 @@
                 "parameters": {
                     "$connections": {
                         "value": {
-                            "azuresentinel_1": {
-                                "id": "/subscriptions/ebc39b89-3502-4871-a087-c6ab62d85a4d/providers/Microsoft.Web/locations/northeurope/managedApis/azuresentinel",
-                                "connectionId": "/subscriptions/ebc39b89-3502-4871-a087-c6ab62d85a4d/resourceGroups/Demo-Sentinel-RG/providers/Microsoft.Web/connections/azuresentinel",
+                            "azuresentinel": {
+                                "connectionId": "[resourceId('Microsoft.Web/connections', variables('AzureSentinelConnectionName'))]",
                                 "connectionName": "[variables('AzureSentinelConnectionName')]",
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuresentinel')]",
                                 "connectionProperties": {
                                     "authentication": {
                                         "type": "ManagedServiceIdentity"
@@ -189,10 +189,15 @@
                                     }
                                 }
                             },
-                            "wdatp-1": {
-                                "id": "/subscriptions/ebc39b89-3502-4871-a087-c6ab62d85a4d/providers/Microsoft.Web/locations/northeurope/managedApis/wdatp",
-                                "connectionId": "/subscriptions/ebc39b89-3502-4871-a087-c6ab62d85a4d/resourceGroups/Demo-Sentinel-RG/providers/Microsoft.Web/connections/wdatp-1",
-                                "connectionName": "[variables('MDATPConnectionName')]"
+                            "wdatp": {
+                                "connectionId": "[resourceId('Microsoft.Web/connections', variables('MDATPConnectionName'))]",
+                                "connectionName": "[variables('MDATPConnectionName')]",
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/wdatp')]",
+                                "connectionProperties": {
+                                    "authentication": {
+                                        "type": "ManagedServiceIdentity"
+                                    }
+                                }
                             }
                         }
                     }
