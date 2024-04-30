@@ -99,10 +99,7 @@
                                         "body": "SigninLogs\n| where IPAddress == \"@{items('For_each_Entra_ID')?['Address']}\" and IsInteractive == true and ResultType == 0\n| project TimeGenerated, UserPrincipalName, AppDisplayName, AuthenticationRequirement, ClientAppUsed\n| summarize count() by UserPrincipalName,AppDisplayName, ClientAppUsed",
                                         "path": "/queryData",
                                         "queries": {
-                                            "subscriptions": "ebc39b89-3502-4871-a087-c6ab62d85a4d",
-                                            "resourcegroups": "Demo-Sentinel-RG",
-                                            "resourcetype": "Log Analytics Workspace",
-                                            "resourcename": "Demo-Sentinel",
+                                            "subscriptions": "subscription().subscriptionId",
                                             "timerange": "Last 3 days"
                                         }
                                     }
